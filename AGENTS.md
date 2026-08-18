@@ -95,8 +95,11 @@ flutter build apk --debug   # 需要实机验证时（gradlew 在 android/）
 实机：模拟器 `emulator-5554`，包名 `dev.kawuxing.kawuxing`，
 调试预填：`adb shell am start -n dev.kawuxing.kawuxing/.MainActivity --es prefill "0,0,0,1,2,3,4,5,6,7,8,8,8"`。
 视觉验收用裁剪放大截图逐像素核对，不信全屏截图的粗描述。
-发布：`flutter build apk --release --split-per-abi`（签名读取
-`android/key.properties`，缺失自动回退 debug 签名）；图标重生成：
+发布：`dart run tool/package_release.dart` —— 构建 release split-per-abi
+并把产物按版本号归档到 `build/release/kawuxing-<ver>-<abi>-release.apk`
+（签名读取 `android/key.properties`，缺失自动回退 debug 签名；gradle 原始
+产物在 `build/app/outputs/apk/release/` 同名，`flutter-apk/` 下为 Flutter
+工具复制的默认名，分发以 `build/release/` 为准）；图标重生成：
 `dart run tool/make_icon_from_image.dart <图片.png>`（当前图标来自
 用户提供图，边缘平均色自动做自适应背景层；自绘备选方案在
 `tool/gen_icon.dart`；`tool/icon_probe.dart` 为像素级诊断工具）。

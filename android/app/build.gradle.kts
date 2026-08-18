@@ -56,6 +56,16 @@ android {
             )
         }
     }
+
+    // 产物命名带版本号与 ABI：kawuxing-<versionName>-<abi>-<buildType>.apk
+    // （如 kawuxing-1.2.1-arm64-v8a-release.apk），便于分发与回溯。
+    applicationVariants.all {
+        outputs.all {
+            val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
+            val abi = output.getFilter(com.android.build.OutputFile.ABI) ?: "universal"
+            output.outputFileName = "kawuxing-${versionName}-${abi}-${buildType?.name}.apk"
+        }
+    }
 }
 
 kotlin {

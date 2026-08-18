@@ -69,12 +69,13 @@
 
 ## 📥 下载安装
 
-从 [Releases](../../releases) 下载最新 APK：
+从 [Releases](../../releases) 下载最新 APK（文件名带版本号，如
+`kawuxing-1.2.1-arm64-v8a-release.apk`）：
 
 | 产物 | 适用设备 |
 |---|---|
-| `app-arm64-v8a-release.apk` | 主流 64 位手机（推荐） |
-| `app-armeabi-v7a-release.apk` | 32 位老设备 |
+| `kawuxing-*-arm64-v8a-release.apk` | 主流 64 位手机（推荐） |
+| `kawuxing-*-armeabi-v7a-release.apk` | 32 位老设备 |
 
 Android 8.0 及以上直接安装。应用不申请任何敏感权限。
 
@@ -85,6 +86,12 @@ flutter pub get
 flutter analyze   # 0 issue
 flutter test      # 全绿（含 11 万组对拍与性能基准）
 flutter build apk --release   # 未配置签名时自动回退 debug 签名
+```
+
+一键打包（产物按版本号归档到 `build/release/`）：
+
+```bash
+dart run tool/package_release.dart
 ```
 
 调试预填（模拟器，仅 debug 生效）：
