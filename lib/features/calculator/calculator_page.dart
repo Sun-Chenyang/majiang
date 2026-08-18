@@ -6,6 +6,7 @@ import '../../core/advice.dart';
 import '../../core/fan.dart';
 import '../../core/feedback.dart';
 import '../../core/hand_state.dart';
+import '../../core/meld_advice.dart';
 import '../../core/result.dart';
 import '../../core/rules_config.dart';
 import '../../core/ting.dart';
@@ -35,6 +36,10 @@ class _CalculatorPageState extends State<CalculatorPage> {
   WinContext _ctx = const WinContext(selfDraw: true); // 默认自摸：展示完整番型潜力
   final Set<int> _honorMelds = {};
 
+  /// 他家已见张数（长按牌池标记，M8.4）。独立于撤销栈——标记描述的是
+  /// 场上信息，不随手牌编辑回退；重置（新一局）时清空。
+  final Uint8List _seen = Uint8List(kTileKindCount);
+
   Uint8List _initCounts() {
     final c = Uint8List(kTileKindCount);
     final init = widget.initialCounts;
@@ -53,6 +58,8 @@ class _CalculatorPageState extends State<CalculatorPage> {
     }
     return s;
   }
+
+  HandState get _handState => HandState(_counts, _honorMelds, externalSeen: _seen);
 
   void _add(int t) {
     if (_counts[t] >= 4) return;
@@ -87,12 +94,141 @@ class _CalculatorPageState extends State<CalculatorPage> {
     setState(() {
       _pushUndo();
       _counts.fillRange(0, kTileKindCount, 0);
+      _seen.fillRange(0, kTileKindCount, 0); // 新一局：已见标记一并清空
+      _honorMelds.clear();
     });
+  }
+
+  /// 长按牌池：他家已见张数标记（弃牌 +1 / 碰 +3 / 杠 +4，PRD FR1.6）。
+  Future<void> _showSeenSheet(int t) {
+    final own = _counts[t];
+    final melded = _honorMelds.contains(t) ? 3 : 0;
+    final seen = _seen[t];
+    final remain = 4 - own - melded - seen;
+    final capacity = 4 - own - melded; // 他家可见上限（含已标记部分）
+
+    Widget actionRow({
+      required IconData icon,
+      required String title,
+      required String subtitle,
+      required bool enabled,
+      required VoidCallback onTap,
+      bool danger = false,
+    }) {
+      final deep = danger ? GlassColors.dangerDeep : GlassColors.iceDeep;
+      return Padding(
+        padding: const EdgeInsets.only(top: 6),
+        child: Opacity(
+          opacity: enabled ? 1 : 0.4,
+          child: InkWell(
+            onTap: enabled ? onTap : null,
+            borderRadius: BorderRadius.circular(GlassRadius.sm),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: GlassLight.begin,
+                  end: GlassLight.end,
+                  colors: [
+                    GlassColors.surface(0.55),
+                    GlassColors.surface(0.26),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(GlassRadius.sm),
+                border: Border.all(
+                  color: (danger ? GlassColors.danger : GlassColors.iceBlue)
+                      .withValues(alpha: 0.4),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(icon, size: 20, color: deep),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(title,
+                            style: TextStyle(
+                                color: GlassColors.textPrimary,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700)),
+                        Text(subtitle, style: GlassTypography.caption),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    void mark(int delta) {
+      AppFeedback.tap();
+      setState(() => _seen[t] += delta);
+      Navigator.of(context).pop();
+    }
+
+    return showGlassModalBottomSheet(
+      context,
+      accent: GlassColors.iceBlue,
+      title: '${tileName(t)} · 已见牌标记',
+      builder: (sheetCtx) => Padding(
+        padding: const EdgeInsets.only(top: 4, bottom: 6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              '手上 $own 张${melded > 0 ? ' · 自家碰/杠 3 张' : ''} · '
+              '他家已见 $seen 张 · 剩余 $remain 张',
+              style: GlassTypography.body,
+            ),
+            const SizedBox(height: 6),
+            actionRow(
+              icon: Icons.outbound_rounded,
+              title: '他家弃牌 · +1',
+              subtitle: '他家打出一张${tileName(t)}',
+              enabled: seen + 1 <= capacity,
+              onTap: () => mark(1),
+            ),
+            actionRow(
+              icon: Icons.join_inner_rounded,
+              title: '他家碰了 · +3',
+              subtitle: '他家亮出 ${tileName(t)} 刻子',
+              enabled: seen + 3 <= capacity,
+              onTap: () => mark(3),
+            ),
+            actionRow(
+              icon: Icons.layers_rounded,
+              title: '他家杠了 · +4',
+              subtitle: '他家亮出 4 张${tileName(t)}',
+              enabled: seen + 4 <= capacity,
+              onTap: () => mark(4),
+            ),
+            actionRow(
+              icon: Icons.delete_outline_rounded,
+              title: '清除标记',
+              subtitle: '清掉该牌的他家已见计数（当前 $seen）',
+              enabled: seen > 0,
+              danger: true,
+              onTap: () {
+                AppFeedback.tap();
+                setState(() => _seen[t] = 0);
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final result = analyzeHand(HandState(_counts, _honorMelds), _ctx);
+    final result = analyzeHand(_handState, _ctx);
     return SafeArea(
       bottom: false, // 底部安全区由外层 GlassBottomBar 区域处理
       child: Column(
@@ -120,10 +256,11 @@ class _CalculatorPageState extends State<CalculatorPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('卡五星听牌器', style: GlassTypography.display),
+                Text('卡五星听牌器', style: GlassTypography.display),
                 const SizedBox(height: 3),
+                // 副标题裸露在流动光斑上，用高对比辅助字（captionStrong）
                 Text('筒 · 条 · 中发白 · 即时听牌与打牌建议',
-                    style: GlassTypography.caption),
+                    style: GlassTypography.captionStrong),
               ],
             ),
           ),
@@ -181,7 +318,13 @@ class _CalculatorPageState extends State<CalculatorPage> {
     final cells = tiles
         .map((t) => SizedBox(
               width: cellW,
-              child: PoolTileCell(tile: t, count: _counts[t], onTap: () => _add(t)),
+              child: PoolTileCell(
+                tile: t,
+                count: _counts[t],
+                onTap: () => _add(t),
+                onLongPress: () => _showSeenSheet(t),
+                externalSeen: _seen[t],
+              ),
             ))
         .toList();
     if (!alignLeft) {
@@ -261,7 +404,7 @@ class _CalculatorPageState extends State<CalculatorPage> {
                       children: [
                         TextSpan(
                           text: '已选牌 $total 张',
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: GlassColors.textPrimary,
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
@@ -270,7 +413,7 @@ class _CalculatorPageState extends State<CalculatorPage> {
                         if (result.meldCount > 0)
                           TextSpan(
                             text: ' · 碰/杠过 ${result.meldCount} 组',
-                            style: const TextStyle(
+                            style: TextStyle(
                                 color: GlassColors.iceDeep, fontSize: 13),
                           ),
                       ],
@@ -302,12 +445,12 @@ class _CalculatorPageState extends State<CalculatorPage> {
           begin: GlassLight.begin,
           end: GlassLight.end,
           colors: [
-            Colors.white.withValues(alpha: 0.42), // 槽底左上：受光亮
-            Colors.white.withValues(alpha: 0.16), // 槽底右下：背光暗 → 凹陷感
+            GlassColors.surface(0.42), // 槽底左上：受光亮
+            GlassColors.surface(0.16), // 槽底右下：背光暗 → 凹陷感
           ],
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.55)),
+        border: Border.all(color: GlassColors.rim(0.55)),
       ),
       child: total == 0
           ? Center(
@@ -366,7 +509,7 @@ class _CalculatorPageState extends State<CalculatorPage> {
             width: 6, height: 30,
             child: VerticalDivider(
               width: 1,
-              color: Colors.white70,
+              color: Color(0x80FFFFFF),
             ),
           ),
           for (final t in kHonorTiles)
@@ -385,8 +528,7 @@ class _CalculatorPageState extends State<CalculatorPage> {
     final (base, border, fg) = value
         ? (GlassColors.mint, GlassColors.mint.withValues(alpha: 0.65),
             GlassColors.mintDeep)
-        : (Colors.white, Colors.white.withValues(alpha: 0.62),
-            GlassColors.textTertiary);
+        : (Colors.white, GlassColors.rim(0.62), GlassColors.textTertiary);
     return InkWell(
       onTap: () {
         AppFeedback.tap();
@@ -400,8 +542,12 @@ class _CalculatorPageState extends State<CalculatorPage> {
             begin: GlassLight.begin,
             end: GlassLight.end,
             colors: [
-              base.withValues(alpha: value ? 0.30 : 0.34),
-              base.withValues(alpha: value ? 0.16 : 0.20),
+              value
+                  ? base.withValues(alpha: 0.30)
+                  : GlassColors.surface(0.34),
+              value
+                  ? base.withValues(alpha: 0.16)
+                  : GlassColors.surface(0.20),
             ],
           ),
           borderRadius: BorderRadius.circular(GlassRadius.pill),
@@ -424,7 +570,7 @@ class _CalculatorPageState extends State<CalculatorPage> {
         color: GlassColors.danger,
         deepColor: GlassColors.dangerDeep,
         title: total == 0 ? '开始录入' : '手牌张数不对（当前 $total 张）',
-        child: const Text(
+        child: Text(
           '手牌应为 待摸 3n+1 张（13/10/7/4/1）或 待打 3n+2 张（14/11/8/5/2）。\n'
           '已碰/杠出的牌不用录入：碰一组后待摸剩 10 张、待打剩 11 张。',
           style: GlassTypography.body,
@@ -436,29 +582,25 @@ class _CalculatorPageState extends State<CalculatorPage> {
     return _buildWaitResult(result);
   }
 
-  /// 待摸（3n+1）：听牌判断 / n 向听进张。
+  /// 待摸（3n+1）：听牌判断 / n 向听进张 + 碰/杠时机。
   Widget _buildWaitResult(HandAnalysis result) {
     final ukeire = result.ukeire!;
+    final meld = result.meldAdvice;
+    final meldShown = meld == null
+        ? const <MeldOption>[]
+        : meld.options.where((o) => isWorthShowing(o, meld)).toList();
     final totalRemain = ukeire.totalRemain;
-    if (ukeire.shanten == 0) {
-      return ListView(
-        padding: _resultPadding(),
-        children: [
-          _badgeHeader(
-            icon: Icons.check_circle_outline_rounded,
-            color: GlassColors.mint,
-            deepColor: GlassColors.mintDeep,
-            title: '听牌',
-            subtitle: '听 ${ukeire.accepted.length} 种 · 共 $totalRemain 张',
-          ),
-          const SizedBox(height: 8),
-          for (final w in ukeire.accepted) _waitCard(w),
-        ],
-      );
-    }
-    return ListView(
-      padding: _resultPadding(),
-      children: [
+
+    final children = <Widget>[
+      if (ukeire.shanten == 0)
+        _badgeHeader(
+          icon: Icons.check_circle_outline_rounded,
+          color: GlassColors.mint,
+          deepColor: GlassColors.mintDeep,
+          title: '听牌',
+          subtitle: '听 ${ukeire.accepted.length} 种 · 共 $totalRemain 张',
+        )
+      else
         _badgeHeader(
           icon: Icons.arrow_circle_up_rounded,
           color: GlassColors.iceBlue,
@@ -466,22 +608,154 @@ class _CalculatorPageState extends State<CalculatorPage> {
           title: '未听牌 · ${ukeire.shanten} 向听',
           subtitle: '进张 ${ukeire.accepted.length} 种 · 共 $totalRemain 张',
         ),
-        const SizedBox(height: 8),
-        if (ukeire.accepted.isEmpty)
-          const Padding(
-            padding: EdgeInsets.all(8),
-            child: Text('当前无进张：手牌结构已定型或剩余张数不足。',
-                style: GlassTypography.body),
-          )
-        else
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final w in ukeire.accepted) _miniWaitChip(w, highlight: true),
-            ],
+      const SizedBox(height: 8),
+      if (ukeire.shanten == 0)
+        for (final w in ukeire.accepted) _waitCard(w)
+      else if (ukeire.accepted.isEmpty)
+        Padding(
+          padding: EdgeInsets.all(8),
+          child: Text('当前无进张：手牌结构已定型或剩余张数不足。',
+              style: GlassTypography.body),
+        )
+      else
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final w in ukeire.accepted) _miniWaitChip(w, highlight: true),
+          ],
+        ),
+      // 碰/杠时机（他家打出对应牌时的鸣牌收益预计算）
+      if (meldShown.isNotEmpty) ...[
+        const SizedBox(height: 12),
+        _badgeHeader(
+          icon: Icons.bolt_outlined,
+          color: GlassColors.lavender,
+          deepColor: GlassColors.lavenderDeep,
+          title: '碰/杠时机',
+          subtitle: '他家打出对应牌时可鸣',
+        ),
+        for (final o in meldShown)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: _meldCard(o, meld!),
           ),
       ],
+    ];
+    return ListView(
+      padding: _resultPadding(),
+      children: children,
+    );
+  }
+
+  /// 碰/杠建议行（M8.3）：与打牌建议行同一套玻璃行样式。
+  Widget _meldCard(MeldOption o, MeldAdvice meld) {
+    final warn = o.breaksTenpai;
+    final (accent, accentDeep) = warn
+        ? (GlassColors.danger, GlassColors.dangerDeep)
+        : (GlassColors.lavender, GlassColors.lavenderDeep);
+    return GlassCard(
+      frost: false,
+      surfaceTint: warn ? accent : GlassColors.glassWhite,
+      tintStrength: warn ? 0.16 : 0.5,
+      shadow: false,
+      radius: 16,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      child: Row(
+        children: [
+          // 鸣牌类型徽标：拟物小凸起（与"推荐"徽标同光照语言）
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: GlassLight.begin,
+                end: GlassLight.end,
+                colors: [accent.lighten(0.24), accent.darken(0.1)],
+              ),
+              borderRadius: BorderRadius.circular(GlassRadius.pill),
+              boxShadow: GlassShadow.chip(accent),
+            ),
+            child: Text(o.isGang ? '杠' : '碰',
+                style: TextStyle(
+                    color: GlassColors.textOnAccent,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700)),
+          ),
+          const SizedBox(width: 6),
+          MiniTile(tile: o.tile, width: 30),
+          const SizedBox(width: 4),
+          if (!o.isGang && o.discard != null) ...[
+            Text('→ 打',
+                style:
+                    TextStyle(color: GlassColors.textTertiary, fontSize: 12)),
+            const SizedBox(width: 4),
+            MiniTile(tile: o.discard!, width: 30),
+            const SizedBox(width: 6),
+          ] else ...[
+            Text('补摸',
+                style:
+                    TextStyle(color: GlassColors.textTertiary, fontSize: 12)),
+            const SizedBox(width: 6),
+          ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${_meldShantenText(o, meld)} · 进张 ${o.ukeireKinds} 种 ${o.totalRemain} 张',
+                  style: TextStyle(
+                      color: accentDeep,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600),
+                ),
+                if (o.breaksTenpai || o.killsSevenPairs) ...[
+                  const SizedBox(height: 4),
+                  Wrap(
+                    spacing: 4,
+                    runSpacing: 4,
+                    children: [
+                      if (o.breaksTenpai)
+                        _warnChip('破坏听牌', GlassColors.danger,
+                            GlassColors.dangerDeep),
+                      if (o.killsSevenPairs)
+                        _warnChip('七对作废', GlassColors.warning,
+                            GlassColors.warningDeep),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _meldShantenText(MeldOption o, MeldAdvice m) {
+    if (o.breaksTenpai) return '鸣后掉到 ${o.shantenAfter} 向听';
+    if (m.currentShanten == 0 && o.shantenAfter == 0) return '鸣后仍听牌';
+    if (o.shantenAfter == 0) return '${m.currentShanten} 向听 → 听牌';
+    return '${m.currentShanten} 向听 → ${o.shantenAfter} 向听';
+  }
+
+  /// 前提警示小标签：白玻璃 chip + 功能色描边。
+  Widget _warnChip(String label, Color color, Color deep) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: GlassLight.begin,
+          end: GlassLight.end,
+          colors: [
+            GlassColors.surface(0.72),
+            GlassColors.surface(0.38),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(GlassRadius.xs),
+        border: Border.all(color: color.withValues(alpha: 0.55)),
+      ),
+      child: Text(label,
+          style: TextStyle(fontSize: 11, color: deep)),
     );
   }
 
@@ -625,12 +899,16 @@ class _CalculatorPageState extends State<CalculatorPage> {
         children: [
           Row(
             children: [
-              MiniTile(tile: w.tile, width: 34),
+              // 剩余 0：整张牌灰化（已见 4 张，物理不可进）
+              Opacity(
+                opacity: w.remain == 0 ? 0.45 : 1,
+                child: MiniTile(tile: w.tile, width: 34),
+              ),
               const SizedBox(width: 10),
               SizedBox(
                 width: 52,
                 child: Text(tileName(w.tile),
-                    style: const TextStyle(
+                    style: TextStyle(
                         color: GlassColors.textPrimary,
                         fontSize: 15,
                         fontWeight: FontWeight.w700)),
@@ -694,7 +972,7 @@ class _CalculatorPageState extends State<CalculatorPage> {
     return '将 $head · $melds$extra$winMark';
   }
 
-  int get _handMeldCount => HandState(_counts, _honorMelds).meldCount;
+  int get _handMeldCount => _handState.meldCount;
 
   Widget _miniWaitChip(AcceptedTile w, {bool highlight = false}) {
     return Container(
@@ -704,26 +982,32 @@ class _CalculatorPageState extends State<CalculatorPage> {
           begin: GlassLight.begin,
           end: GlassLight.end,
           colors: [
-            Colors.white.withValues(alpha: 0.62),
-            Colors.white.withValues(alpha: 0.30),
+            GlassColors.surface(0.62),
+            GlassColors.surface(0.30),
           ],
         ),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: highlight
               ? GlassColors.iceBlue.withValues(alpha: 0.55)
-              : Colors.white.withValues(alpha: 0.7),
+              : GlassColors.rim(0.7),
         ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          MiniTile(tile: w.tile, width: 24),
+          Opacity(
+            opacity: w.remain == 0 ? 0.45 : 1,
+            child: MiniTile(tile: w.tile, width: 24),
+          ),
           const SizedBox(width: 5),
           Text(
             w.remain == 0 ? '${tileName(w.tile)}·已见4' : '${tileName(w.tile)}·${w.remain}',
             style: TextStyle(
-              color: highlight ? GlassColors.iceDeep : GlassColors.textSecondary,
+              // 剩余 0 灰化：进张物理不可进
+              color: w.remain == 0
+                  ? GlassColors.textTertiary
+                  : (highlight ? GlassColors.iceDeep : GlassColors.textSecondary),
               fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
@@ -761,7 +1045,7 @@ class _CalculatorPageState extends State<CalculatorPage> {
           SizedBox(
             width: 46,
             child: Text(tileName(opt.discard),
-                style: const TextStyle(
+                style: TextStyle(
                     color: GlassColors.textPrimary,
                     fontSize: 14,
                     fontWeight: FontWeight.w700)),
@@ -822,7 +1106,7 @@ class _CalculatorPageState extends State<CalculatorPage> {
         borderRadius: BorderRadius.circular(GlassRadius.pill),
         boxShadow: GlassShadow.chip(accent),
       ),
-      child: const Text('推荐',
+      child: Text('推荐',
           style: TextStyle(
               color: GlassColors.textOnAccent,
               fontSize: 11,
@@ -838,8 +1122,8 @@ class _CalculatorPageState extends State<CalculatorPage> {
           begin: GlassLight.begin,
           end: GlassLight.end,
           colors: [
-            Colors.white.withValues(alpha: 0.55),
-            Colors.white.withValues(alpha: 0.25),
+            GlassColors.surface(0.55),
+            GlassColors.surface(0.25),
           ],
         ),
         borderRadius: BorderRadius.circular(6),
@@ -847,11 +1131,16 @@ class _CalculatorPageState extends State<CalculatorPage> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          MiniTile(tile: w.tile, width: 20),
+          Opacity(
+            opacity: w.remain == 0 ? 0.45 : 1,
+            child: MiniTile(tile: w.tile, width: 20),
+          ),
           const SizedBox(width: 3),
           Text('${w.remain}',
-              style: const TextStyle(
-                  color: GlassColors.textSecondary,
+              style: TextStyle(
+                  color: w.remain == 0
+                      ? GlassColors.textTertiary
+                      : GlassColors.textSecondary,
                   fontSize: 11,
                   fontWeight: FontWeight.w600)),
         ],

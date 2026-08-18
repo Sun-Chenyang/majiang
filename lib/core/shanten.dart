@@ -22,6 +22,13 @@ int calculateShanten(Uint8List concealed, int meldCount) {
   return pairs < standard ? pairs : standard;
 }
 
+/// 标准型分支向听数（公开给鸣牌建议比较"碰后七对作废"分支）。
+int standardShanten(Uint8List concealed, int meldCount) =>
+    _standardShanten(concealed, meldCount);
+
+/// 七对分支向听数（无副露前提；有副露时调用方须自行排除）。
+int sevenPairsShanten(Uint8List concealed) => _sevenPairsShanten(concealed);
+
 /// 标准型向听数（回溯枚举"面子 + 搭子 + 雀头"最优组合）：
 ///
 /// ```plain

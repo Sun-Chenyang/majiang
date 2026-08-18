@@ -50,7 +50,7 @@ class TileCard extends StatelessWidget {
       height: height,
       decoration: BoxDecoration(
         // 象牙白受光渐变：左上 #FFFFFF → 右下 #F1EAE0（全局光源方向）
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: GlassLight.begin,
           end: GlassLight.end,
           colors: [Color(0xFFFFFFFF), Color(0xFFF1EAE0)],
@@ -59,10 +59,9 @@ class TileCard extends StatelessWidget {
         boxShadow: elevation <= 0
             ? null
             : [
-                // 近影：冷墨色右下向（x/y 正偏移遵循全局光源）
+                // 近影：投影墨色右下向（x/y 正偏移遵循全局光源；暗色墨色更深）
                 BoxShadow(
-                  color: const Color(0xFF3A5568)
-                      .withValues(alpha: 0.18 * elevation),
+                  color: GlassColors.shadowInk.withValues(alpha: 0.18 * elevation),
                   blurRadius: width * 0.10,
                   offset: Offset(width * 0.03, width * 0.06),
                 ),
@@ -183,19 +182,34 @@ class _TileLightPainter extends CustomPainter {
       oldDelegate.radius != radius;
 }
 
-/// 牌池格子：牌面卡片 + 已选数角标，点击 +1。
+/// 牌池格子：牌面卡片 + 已选数角标（右上），点击 +1；
+/// 长按弹已见牌标记（他家弃牌/碰/杠，M8.4），已见时左下角显示"见n"角标。
 class PoolTileCell extends StatelessWidget {
   final int tile;
   final int count;
   final VoidCallback? onTap;
 
-  const PoolTileCell({super.key, required this.tile, required this.count, this.onTap});
+  /// 长按：已见牌标记入口。
+  final VoidCallback? onLongPress;
+
+  /// 他家已见张数（长按标记累计），>0 时左下角显示角标。
+  final int externalSeen;
+
+  const PoolTileCell({
+    super.key,
+    required this.tile,
+    required this.count,
+    this.onTap,
+    this.onLongPress,
+    this.externalSeen = 0,
+  });
 
   @override
   Widget build(BuildContext context) {
     final full = count >= 4;
     return InkWell(
       onTap: full ? null : onTap,
+      onLongPress: onLongPress,
       borderRadius: BorderRadius.circular(8),
       child: Opacity(
         opacity: full ? 0.35 : 1,
@@ -211,22 +225,45 @@ class PoolTileCell extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 4.5, vertical: 1.5),
                   decoration: BoxDecoration(
                     // 薄荷→冰蓝的对角渐变角标：受光方向与全局一致
-                    gradient: const LinearGradient(
+                    gradient: LinearGradient(
                       begin: GlassLight.begin,
                       end: GlassLight.end,
                       colors: [GlassColors.mint, GlassColors.iceBlue],
                     ),
                     borderRadius: BorderRadius.circular(GlassRadius.pill),
                     border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.9),
+                      color: GlassColors.rim(0.9),
                       width: 1,
                     ),
                     boxShadow: GlassShadow.chip(GlassColors.mint),
                   ),
                   child: Text(
                     '×$count',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
+                      height: 1.2,
+                      fontWeight: FontWeight.w700,
+                      color: GlassColors.textOnAccent,
+                    ),
+                  ),
+                ),
+              ),
+            if (externalSeen > 0)
+              Positioned(
+                left: -2,
+                bottom: -3,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1.5),
+                  decoration: BoxDecoration(
+                    // 已见角标：冷墨深底白字（明暗两主题下都可读）
+                    color: GlassColors.shadowInk.withValues(alpha: 0.82),
+                    borderRadius: BorderRadius.circular(GlassRadius.pill),
+                    boxShadow: GlassShadow.chip(GlassColors.shadowInk),
+                  ),
+                  child: Text(
+                    '见$externalSeen',
+                    style: TextStyle(
+                      fontSize: 10,
                       height: 1.2,
                       fontWeight: FontWeight.w700,
                       color: GlassColors.textOnAccent,
@@ -267,8 +304,8 @@ class FanChip extends StatelessWidget {
           begin: GlassLight.begin,
           end: GlassLight.end,
           colors: [
-            Colors.white.withValues(alpha: 0.72),
-            Colors.white.withValues(alpha: 0.38),
+            GlassColors.surface(0.72),
+            GlassColors.surface(0.38),
           ],
         ),
         borderRadius: BorderRadius.circular(GlassRadius.xs),
@@ -276,7 +313,7 @@ class FanChip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: const TextStyle(fontSize: 11, color: GlassColors.mintDeep),
+        style: TextStyle(fontSize: 11, color: GlassColors.mintDeep),
       ),
     );
   }

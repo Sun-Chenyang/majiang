@@ -83,6 +83,39 @@ void main() {
     expect(find.textContaining('雀头'), findsNothing);
   });
 
+  testWidgets('已见牌标记：长按牌池 → 他家弃牌 +1 → 角标与剩余张数联动', (WidgetTester tester) async {
+    // 123筒 789筒 4筒 6筒 123条 55条（13 张，听 5筒 剩 4）
+    await pumpPortrait(
+      tester,
+      KaWuXingApp(prefill: prefillOf([
+        0, 1, 2, 6, 7, 8, // 筒 123/789
+        3, 5, // 4筒 6筒
+        9, 10, 11, 13, 13, // 123条 55条
+      ])),
+    );
+
+    expect(find.text('听牌'), findsOneWidget);
+    expect(find.text('剩 4 张'), findsOneWidget);
+
+    // 长按 5筒 格（牌池第 2 行第 5 格 = index 9+4）
+    await tester.longPress(find.byType(PoolTileCell).at(4));
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.textContaining('已见牌标记'), findsOneWidget);
+    expect(find.textContaining('他家弃牌'), findsOneWidget);
+
+    // 标记他家弃牌 2 次 → 见2 角标出现，听牌卡剩余张数 4 → 2
+    await tester.tap(find.textContaining('他家弃牌'));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.longPress(find.byType(PoolTileCell).at(4));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.textContaining('他家弃牌'));
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.text('见2'), findsOneWidget); // 牌池左下角标
+    expect(find.text('剩 2 张'), findsOneWidget); // 进张精确扣减
+  });
+
   testWidgets('设置页规则速览', (WidgetTester tester) async {
     await pumpPortrait(tester, const KaWuXingApp());
 

@@ -391,10 +391,11 @@ class _RulesPageState extends State<RulesPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('规则速查', style: GlassTypography.display),
+                Text('规则速查', style: GlassTypography.display),
                 const SizedBox(height: 3),
+                // 副标题裸露在流动光斑上，用高对比辅助字（captionStrong）
                 Text('番型倍数与牌例 · 数据来自本地规则文档',
-                    style: GlassTypography.caption),
+                    style: GlassTypography.captionStrong),
               ],
             ),
           ),
@@ -442,7 +443,7 @@ class _RulesPageState extends State<RulesPage> {
       padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 16),
       child: Column(
         children: [
-          const Icon(Icons.search_off_rounded,
+          Icon(Icons.search_off_rounded,
               size: 34, color: GlassColors.textTertiary),
           const SizedBox(height: 10),
           Text('没有匹配「$_query」的规则', style: GlassTypography.body),
@@ -493,15 +494,17 @@ class _RulesPageState extends State<RulesPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(e.name,
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
                           color: GlassColors.textPrimary)),
                   const SizedBox(height: 3),
+                  // 列表描述：薄玻璃(tint 0.5)挡不住浅色光斑穿透，
+                  // tertiary 对比不足，升 captionStrong
                   Text(e.desc,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: GlassTypography.caption),
+                      style: GlassTypography.captionStrong),
                 ],
               ),
             ),
@@ -510,7 +513,7 @@ class _RulesPageState extends State<RulesPage> {
               _multiplierBadge(e.multiplier, accent),
             ] else ...[
               const SizedBox(width: 8),
-              const Icon(Icons.chevron_right_rounded,
+              Icon(Icons.chevron_right_rounded,
                   size: 20, color: GlassColors.textTertiary),
             ],
           ],
@@ -533,7 +536,7 @@ class _RulesPageState extends State<RulesPage> {
         boxShadow: GlassShadow.chip(accent),
       ),
       child: Text(text,
-          style: const TextStyle(
+          style: TextStyle(
               color: GlassColors.textOnAccent,
               fontSize: 12.5,
               fontWeight: FontWeight.w700)),
@@ -576,7 +579,7 @@ class _RulesPageState extends State<RulesPage> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.info_outline_rounded,
+                    Icon(Icons.info_outline_rounded,
                         size: 16, color: GlassColors.warningDeep),
                     const SizedBox(width: 8),
                     Expanded(
@@ -610,7 +613,7 @@ class _RulesPageState extends State<RulesPage> {
                 width: 5,
                 height: 5,
                 margin: const EdgeInsets.only(top: 8),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: GlassColors.textSecondary,
                   shape: BoxShape.circle,
                 ),
@@ -655,7 +658,7 @@ class _RulesPageState extends State<RulesPage> {
         children: [
           Row(
             children: [
-              const Icon(Icons.style_rounded,
+              Icon(Icons.style_rounded,
                   size: 15, color: GlassColors.mintDeep),
               const SizedBox(width: 6),
               Text('牌例',
@@ -723,7 +726,7 @@ class _RulesPageState extends State<RulesPage> {
               borderRadius: BorderRadius.circular(GlassRadius.pill),
               boxShadow: GlassShadow.chip(GlassColors.mint),
             ),
-            child: const Text('胡',
+            child: Text('胡',
                 style: TextStyle(
                     color: GlassColors.textOnAccent,
                     fontSize: 9.5,

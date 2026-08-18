@@ -7,7 +7,7 @@ import 'package:kawuxing/design_system/design_system.dart';
 /// （规则页装饰条、番数徽标、底栏文字集体发黑）。
 void main() {
   test('lighten 向白色混合且保留色相', () {
-    const mint = GlassColors.mint; // #64D2B7
+    final mint = GlassColors.mint; // #64D2B7
     final light = mint.lighten(0.2);
 
     expect(light.r, greaterThan(mint.r));
@@ -20,7 +20,7 @@ void main() {
   });
 
   test('darken 压暗且不越过原色', () {
-    const ice = GlassColors.iceBlue; // #70B6FF
+    final ice = GlassColors.iceBlue; // #70B6FF
     final dark = ice.darken(0.22);
 
     expect(dark.r, lessThan(ice.r));
@@ -33,7 +33,7 @@ void main() {
   });
 
   test('边界：lighten(1) 为白，darken(1) 为黑', () {
-    const c = GlassColors.lavender;
+    final c = GlassColors.lavender;
     final white = c.lighten(1.0);
     expect(white.r, greaterThan(0.99));
     expect(white.g, greaterThan(0.99));

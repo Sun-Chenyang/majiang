@@ -6,6 +6,7 @@ library;
 
 import 'advice.dart';
 import 'hand_state.dart';
+import 'meld_advice.dart';
 import 'rules_config.dart';
 import 'shanten.dart';
 import 'ting.dart';
@@ -29,6 +30,9 @@ class HandAnalysis {
   /// 待摸态：进张/听牌 + 番型。
   final UkeireResult? ukeire;
 
+  /// 待摸态：碰/杠时机建议（无对子时 options 为空）。
+  final MeldAdvice? meldAdvice;
+
   /// 待打态：打牌建议（已排序）+ 损失提示。
   final DiscardAdvice? advice;
 
@@ -44,6 +48,7 @@ class HandAnalysis {
     required this.isWin,
     required this.winStructures,
     required this.ukeire,
+    required this.meldAdvice,
     required this.advice,
     required this.notices,
   });
@@ -71,6 +76,7 @@ HandAnalysis analyzeHand(
       isWin: false,
       winStructures: const [],
       ukeire: null,
+      meldAdvice: null,
       advice: null,
       notices: const [],
     );
@@ -98,6 +104,7 @@ HandAnalysis analyzeHand(
         isWin: true,
         winStructures: wins,
         ukeire: null,
+        meldAdvice: null,
         advice: null,
         notices: notices,
       );
@@ -112,13 +119,15 @@ HandAnalysis analyzeHand(
       isWin: false,
       winStructures: const [],
       ukeire: null,
+      meldAdvice: null,
       advice: advice,
       notices: notices,
     );
   }
 
-  // 待摸（3n+1）：听牌判断
+  // 待摸（3n+1）：听牌判断 + 碰/杠时机建议
   final ukeire = computeUkeire(hand, ctx);
+  final meldAdvice = computeMeldAdvice(hand, ukeire, ctx);
   return HandAnalysis(
     count: count,
     validPhase: true,
@@ -128,6 +137,7 @@ HandAnalysis analyzeHand(
     isWin: false,
     winStructures: const [],
     ukeire: ukeire,
+    meldAdvice: meldAdvice,
     advice: null,
     notices: notices,
   );

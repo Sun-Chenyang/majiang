@@ -1,0 +1,162 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>icon preview</title>
+<style>
+  body { margin:0; padding:28px; background:#1a2129; display:flex; flex-direction:column; align-items:center; gap:28px; }
+  canvas { display:block; }
+</style>
+</head>
+<body>
+<canvas id="icon" width="1024" height="1024" style="width:1024px;height:1024px"></canvas>
+<canvas id="row" width="1440" height="560" style="width:1440px;height:560px"></canvas>
+<script>
+'use strict';
+
+// 调色板（与参考图一致：绒布绿 + 米白牌 + 筒点红绿）
+const GREEN = '#1E7A4A';
+const GREEN_DARK = 'rgba(16,84,50,0.55)';
+const RED = '#C8352B';
+const RED_DARK = 'rgba(140,32,24,0.55)';
+
+function rr(ctx, x, y, w, h, r) {
+  r = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function fillRR(ctx, x, y, w, h, r, fill) {
+  rr(ctx, x, y, w, h, r);
+  ctx.fillStyle = fill;
+  ctx.fill();
+}
+
+// 绒布底：中心深绿向边缘渐浅（参考图）+ 左上受光泽带（全局光左上→右下）
+function drawFelt(ctx, x0, y0, w, h, radius) {
+  const g = ctx.createRadialGradient(
+      x0 + w * 0.50, y0 + h * 0.44, w * 0.10,
+      x0 + w * 0.50, y0 + h * 0.52, w * 0.80);
+  g.addColorStop(0, '#2C8253');
+  g.addColorStop(0.65, '#2E8B57');
+  g.addColorStop(1, '#3CB371');
+  fillRR(ctx, x0, y0, w, h, radius, g);
+
+  const sheen = ctx.createRadialGradient(
+      x0 + w * 0.24, y0 + h * 0.14, 0,
+      x0 + w * 0.24, y0 + h * 0.14, w * 0.72);
+  sheen.addColorStop(0, 'rgba(255,255,255,0.10)');
+  sheen.addColorStop(1, 'rgba(255,255,255,0)');
+  fillRR(ctx, x0, y0, w, h, radius, sheen);
+}
+
+// 一张立牌：米白渐变牌面 + 细边框 + 左上高光 + 右下投影
+function drawTile(ctx, x, y, w, h) {
+  const r = w * 0.10;
+
+  ctx.save();
+  ctx.shadowColor = 'rgba(6,22,14,0.42)';
+  ctx.shadowBlur = w * 0.18;
+  ctx.shadowOffsetX = w * 0.055;
+  ctx.shadowOffsetY = w * 0.10;
+  fillRR(ctx, x, y, w, h, r, '#efe6cf');
+  ctx.restore();
+
+  const g = ctx.createLinearGradient(x, y, x + w, y + h);
+  g.addColorStop(0, '#FCF8ED');
+  g.addColorStop(1, '#EDE3C8');
+  fillRR(ctx, x, y, w, h, r, g);
+
+  const lw = Math.max(1.2, w * 0.014);
+  rr(ctx, x + lw * 0.6, y + lw * 0.6, w - lw * 1.2, h - lw * 1.2, r * 0.94);
+  ctx.strokeStyle = 'rgba(120,98,56,0.5)';
+  ctx.lineWidth = lw;
+  ctx.stroke();
+
+  const hl = ctx.createRadialGradient(
+      x + w * 0.18, y + h * 0.10, 0, x + w * 0.18, y + h * 0.10, w * 0.95);
+  hl.addColorStop(0, 'rgba(255,255,255,0.32)');
+  hl.addColorStop(1, 'rgba(255,255,255,0)');
+  fillRR(ctx, x, y, w, h, r, hl);
+}
+
+// 筒点：外环 + 内芯同心圆，带外缘细描边
+function drawDot(ctx, cx, cy, R, color, edge) {
+  ctx.beginPath();
+  ctx.arc(cx, cy, R * 1.02, 0, Math.PI * 2);
+  ctx.strokeStyle = edge;
+  ctx.lineWidth = Math.max(1, R * 0.06);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, R * 0.90, 0, Math.PI * 2);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = R * 0.24;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, R * 0.42, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+// 字牌：牌面 + 居中字形（红中 / 绿發）
+function drawGlyphTile(ctx, x, y, w, h, ch, color, scale, dy) {
+  drawTile(ctx, x, y, w, h);
+  const fs = h * scale;
+  ctx.font = '700 ' + fs + 'px "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = color;
+  ctx.fillText(ch, x + w / 2, y + h * dy);
+}
+
+function drawIcon(ctx, size) {
+  ctx.clearRect(0, 0, size, size);
+  drawFelt(ctx, 0, 0, size, size, size * 0.155);
+
+  // 大五筒牌
+  const bw = size * 0.345, bh = size * 0.435;
+  const bx = (size - bw) / 2, by = size * 0.095;
+  drawTile(ctx, bx, by, bw, bh);
+
+  const gR = bw * 0.118, rR = bw * 0.138;
+  drawDot(ctx, bx + bw * 0.28, by + bh * 0.26, gR, GREEN, GREEN_DARK);
+  drawDot(ctx, bx + bw * 0.72, by + bh * 0.26, gR, GREEN, GREEN_DARK);
+  drawDot(ctx, bx + bw * 0.28, by + bh * 0.74, gR, GREEN, GREEN_DARK);
+  drawDot(ctx, bx + bw * 0.72, by + bh * 0.74, gR, GREEN, GREEN_DARK);
+  drawDot(ctx, bx + bw * 0.50, by + bh * 0.50, rR, RED, RED_DARK);
+
+  // 底部三张：红中 · 發 · 白板
+  const sh = size * 0.305, sw = sh * 0.68, gap = size * 0.028;
+  const total = sw * 3 + gap * 2;
+  const sx = (size - total) / 2, sy = size * 0.615;
+  drawGlyphTile(ctx, sx, sy, sw, sh, '\u4e2d', RED, 0.58, 0.52);
+  drawGlyphTile(ctx, sx + sw + gap, sy, sw, sh, '\u767c', GREEN, 0.46, 0.50);
+  drawTile(ctx, sx + (sw + gap) * 2, sy, sw, sh);
+}
+
+function drawRowZoom(ctx, w, h) {
+  ctx.clearRect(0, 0, w, h);
+  drawFelt(ctx, 0, 0, w, h, w * 0.04);
+
+  const sh = h * 0.78, sw = sh * 0.68, gap = w * 0.028;
+  const total = sw * 3 + gap * 2;
+  const sx = (w - total) / 2, sy = (h - sh) / 2 + h * 0.03;
+  drawGlyphTile(ctx, sx, sy, sw, sh, '\u4e2d', RED, 0.58, 0.52);
+  drawGlyphTile(ctx, sx + sw + gap, sy, sw, sh, '\u767c', GREEN, 0.46, 0.50);
+  drawTile(ctx, sx + (sw + gap) * 2, sy, sw, sh);
+}
+
+const iconCv = document.getElementById('icon');
+drawIcon(iconCv.getContext('2d'), 1024);
+const rowCv = document.getElementById('row');
+drawRowZoom(rowCv.getContext('2d'), 1440, 560);
+</script>
+</body>
+</html>

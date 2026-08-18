@@ -20,7 +20,7 @@ class GlassCard extends StatelessWidget {
     this.radius = GlassRadius.lg,
     this.blurSigma = 16,
     this.frost = true,
-    this.surfaceTint = GlassColors.glassWhite,
+    this.surfaceTint,
     this.tintStrength = 0.5,
     this.ambient,
     this.shadow = true,
@@ -40,8 +40,9 @@ class GlassCard extends StatelessWidget {
   /// 是否启用 BackdropFilter 真实磨砂（性能开关，见类注释）。
   final bool frost;
 
-  /// 玻璃染色：默认白玻璃；传品牌色可得到「薄荷玻璃 / 冰蓝玻璃」等彩色磨砂。
-  final Color surfaceTint;
+  /// 玻璃染色：默认白玻璃（暗色下自动为深板岩玻璃）；传品牌色可得到
+  /// 「薄荷玻璃 / 冰蓝玻璃」等彩色磨砂。
+  final Color? surfaceTint;
 
   /// 染色强度 0~1：玻璃不透明度。0.5=通透；0.15=彩色薄纱（用于状态卡）。
   final double tintStrength;
@@ -60,6 +61,9 @@ class GlassCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final r = BorderRadius.circular(radius);
+    // 暗色染色修正：彩色 tint 向深板岩混合成"彩色暗玻璃"；
+    // 白玻璃 tint（glassWhite 在暗色下已是深板岩）不受影响。
+    final tint = GlassColors.tintForGlass(surfaceTint ?? GlassColors.glassWhite);
 
     // 玻璃本体：染色渐变（左上 alpha 全值 → 右下 alpha×0.6，形成受光坡面）
     Widget body = DecoratedBox(
@@ -69,8 +73,8 @@ class GlassCard extends StatelessWidget {
           begin: GlassLight.begin,
           end: GlassLight.end,
           colors: [
-            surfaceTint.withValues(alpha: tintStrength),
-            surfaceTint.withValues(alpha: tintStrength * 0.6),
+            tint.withValues(alpha: tintStrength),
+            tint.withValues(alpha: tintStrength * 0.6),
           ],
         ),
       ),
@@ -118,8 +122,12 @@ class _RimLightPainter extends CustomPainter {
 
   final double radius;
 
+  /// 上次绘制时的明暗态：主题切换后与之不同则强制重绘。
+  bool? _paintedDark;
+
   @override
   void paint(Canvas canvas, Size size) {
+    _paintedDark = GlassColors.isDark;
     final rect = Offset.zero & size;
     final stroke = 1.2; // 描边宽：细于 1px 会在低分屏丢失
     final rrect = RRect.fromRectAndRadius(
@@ -136,13 +144,15 @@ class _RimLightPainter extends CustomPainter {
           rect.topLeft,
           rect.bottomRight,
           [
-            Colors.white.withValues(alpha: 0.72), // 受光棱：亮白
-            Colors.white.withValues(alpha: 0.06), // 背光棱：近无
+            GlassColors.rim(0.72), // 受光棱：亮白（暗色自动收敛）
+            GlassColors.rim(0.06), // 背光棱：近无
           ],
         ),
     );
   }
 
   @override
-  bool shouldRepaint(_RimLightPainter oldDelegate) => oldDelegate.radius != radius;
+  bool shouldRepaint(_RimLightPainter oldDelegate) =>
+      oldDelegate.radius != radius ||
+      oldDelegate._paintedDark != GlassColors.isDark;
 }

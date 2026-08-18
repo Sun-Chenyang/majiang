@@ -2,6 +2,10 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'glass_palette.dart';
+
+export 'glass_palette.dart';
+
 /// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 ///  AppGlassTheme · 现代清新微拟物 + 玻璃拟态 设计系统令牌
 ///  Modern Fresh Skeuo-Glassmorphism Design Tokens
@@ -10,6 +14,13 @@ import 'package:flutter/material.dart';
 ///    - 受光面（渐变亮端）永远在 topLeft；
 ///    - 投影（阴影 offset）永远朝向右下（x/y 为正）；
 ///    - 凹槽内阴影相反：顶部内侧背光（暗），底部内侧受光（亮）。
+///    暗色主题下方向同样不变（不变式 3）。
+///
+///  【明暗切换】[GlassColors] 是 [GlassPalette] 的静态门面：App 根部
+///  解析 ThemeMode 后把 [GlassColors.current] 指到 light/dark 调色板并
+///  重建整树。因全局同一时刻只有一套主题、切换即全量重建，门面取值
+///  与 widget 树保持一致（单 Shell App 的取舍，换取业务侧零 Inherited
+///  查找与最小改动面）。
 /// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 /// 光源方向常量：渐变统一使用 [GlassLight.begin] → [GlassLight.end]。
@@ -18,86 +29,110 @@ abstract final class GlassLight {
   static const Alignment end = Alignment.bottomRight; // 背光角
 }
 
-/// 色彩令牌（Color Tokens）。
+/// 色彩令牌门面（Color Tokens）：成员语义见 [GlassPalette]。
 abstract final class GlassColors {
-  // —— 品牌色板（高明度淡彩） ——
-  static const Color mint = Color(0xFF64D2B7); // 薄荷绿 · 主色（成功 / 听牌）
-  static const Color iceBlue = Color(0xFF70B6FF); // 冰蓝 · 辅色（计算 / 进张）
-  static const Color lavender = Color(0xFFA58BFF); // 薰衣草紫 · 点缀（庆祝 / 强调）
-  static const Color canvas = Color(0xFFF8FAFC); // 冷灰白 · 画布基底
+  /// 当前调色板（根部在 build 中随 ThemeMode 同步，幂等赋值）。
+  static GlassPalette current = GlassPalette.light;
 
-  // —— 深化色（浅色玻璃面上的文字/图标，保证对比度 ≥ 4.5:1） ——
-  static const Color mintDeep = Color(0xFF0D9C80);
-  static const Color iceDeep = Color(0xFF2E6FD0);
-  static const Color lavenderDeep = Color(0xFF6F4FD4);
+  static bool get isDark => current.isDark;
+
+  // —— 品牌色板（高明度淡彩） ——
+  static Color get mint => current.mint; // 薄荷绿 · 主色（成功 / 听牌）
+  static Color get iceBlue => current.iceBlue; // 冰蓝 · 辅色（计算 / 进张）
+  static Color get lavender => current.lavender; // 薰衣草紫 · 点缀（庆祝）
+  static Color get canvas => current.canvas; // 画布基底
+
+  // —— 深化色（玻璃面上的文字/图标；暗色下为提亮色，对比度 ≥ 4.5:1） ——
+  static Color get mintDeep => current.mintDeep;
+  static Color get iceDeep => current.iceDeep;
+  static Color get lavenderDeep => current.lavenderDeep;
 
   // —— 功能色（清新系，禁止脏灰与高饱和） ——
-  static const Color success = mint;
-  static const Color warning = Color(0xFFFFB454); // 柔杏 · 提示 / 打牌建议
-  static const Color warningDeep = Color(0xFFAD6410);
-  static const Color danger = Color(0xFFFF8FA3); // 樱粉 · 错误 / 警示
-  static const Color dangerDeep = Color(0xFFD6385F);
-  static const Color neutral = Color(0xFF9DB0BC); // 中性态（未听等）
-  static const Color neutralDeep = Color(0xFF5F7482);
+  static Color get success => current.mint;
+  static Color get warning => current.warning; // 柔杏 · 提示 / 打牌建议
+  static Color get warningDeep => current.warningDeep;
+  static Color get danger => current.danger; // 樱粉 · 错误 / 警示
+  static Color get dangerDeep => current.dangerDeep;
+  static Color get neutral => current.neutral; // 中性态（未听等）
+  static Color get neutralDeep => current.neutralDeep;
 
   // —— 文字色（青灰 slate 系，避免纯黑生硬） ——
-  static const Color textPrimary = Color(0xFF1B2A33); // 主文字
-  static const Color textSecondary = Color(0xFF556774); // 次文字
-  static const Color textTertiary = Color(0xFF93A3AE); // 占位 / 弱提示
-  static const Color textOnAccent = Color(0xFFFFFFFF); // 彩色底上的文字
+  static Color get textPrimary => current.textPrimary;
+  static Color get textSecondary => current.textSecondary;
+  static Color get textTertiary => current.textTertiary;
+  static Color get textOnAccent => current.textOnAccent;
 
   // —— 玻璃材质 ——
-  static const Color glassWhite = Color(0xFFFFFFFF); // 玻璃本体色（以不同 alpha 使用）
-  static const Color shadowInk = Color(0xFF33526B); // 中性投影墨色（冷调，不发脏）
-  static const Color scrim = Color(0xFF1B2A33); // 弹层遮罩基色（低 alpha 使用）
+  static Color get glassWhite => current.glass; // 玻璃本体色（随主题）
+  static Color get shadowInk => current.shadowInk; // 投影墨色
+  static Color get scrim => current.scrim; // 弹层遮罩基色
+
+  // —— 白玻璃表面（暗色自动收敛为低透明白） ——
+  static Color surface(double alpha) => current.surface(alpha);
+  static Color rim(double alpha) => current.rim(alpha);
+  static Color tintForGlass(Color tint) => current.tintForGlass(tint);
+
+  /// 品牌色在玻璃面上做文字/图标的可读变体（暗色换提亮 Deep）。
+  static Color accentOnGlass(Color brand) => current.accentOnGlass(brand);
 }
 
-/// 文字样式（Typography）。
+/// 文字样式（Typography）：颜色取当前调色板，字号/字重两套一致。
 abstract final class GlassTypography {
-  static const TextStyle display = TextStyle(
-    fontSize: 26,
-    height: 1.25,
-    fontWeight: FontWeight.w700,
-    color: GlassColors.textPrimary,
-    letterSpacing: -0.5,
-  );
+  static TextStyle get display => TextStyle(
+        fontSize: 26,
+        height: 1.25,
+        fontWeight: FontWeight.w700,
+        color: GlassColors.textPrimary,
+        letterSpacing: -0.5,
+      );
 
-  static const TextStyle title = TextStyle(
-    fontSize: 19,
-    height: 1.3,
-    fontWeight: FontWeight.w700,
-    color: GlassColors.textPrimary,
-    letterSpacing: -0.2,
-  );
+  static TextStyle get title => TextStyle(
+        fontSize: 19,
+        height: 1.3,
+        fontWeight: FontWeight.w700,
+        color: GlassColors.textPrimary,
+        letterSpacing: -0.2,
+      );
 
-  static const TextStyle titleSm = TextStyle(
-    fontSize: 15.5,
-    height: 1.35,
-    fontWeight: FontWeight.w600,
-    color: GlassColors.textPrimary,
-  );
+  static TextStyle get titleSm => TextStyle(
+        fontSize: 15.5,
+        height: 1.35,
+        fontWeight: FontWeight.w600,
+        color: GlassColors.textPrimary,
+      );
 
-  static const TextStyle body = TextStyle(
-    fontSize: 14,
-    height: 1.55,
-    fontWeight: FontWeight.w500,
-    color: GlassColors.textSecondary,
-  );
+  static TextStyle get body => TextStyle(
+        fontSize: 14,
+        height: 1.55,
+        fontWeight: FontWeight.w500,
+        color: GlassColors.textSecondary,
+      );
 
-  static const TextStyle caption = TextStyle(
-    fontSize: 12,
-    height: 1.45,
-    fontWeight: FontWeight.w500,
-    color: GlassColors.textTertiary,
-  );
+  static TextStyle get caption => TextStyle(
+        fontSize: 12,
+        height: 1.45,
+        fontWeight: FontWeight.w500,
+        color: GlassColors.textTertiary,
+      );
+
+  /// 高对比辅助字：直接落在环境底图（明暗流动的光斑）上的副标题、
+  /// 搜索提示与列表描述用。tertiary 在浅色光斑上对比仅 ~2.2-2.6:1，
+  /// 这类背景不定的文字一律升到 textSecondary（玻璃面上的装饰性
+  /// 辅助字仍用 [caption]）。
+  static TextStyle get captionStrong => TextStyle(
+        fontSize: 12,
+        height: 1.45,
+        fontWeight: FontWeight.w500,
+        color: GlassColors.textSecondary,
+      );
 
   /// 彩色玻璃底上的强调文字。
-  static const TextStyle onGlass = TextStyle(
-    fontSize: 14,
-    height: 1.4,
-    fontWeight: FontWeight.w600,
-    color: GlassColors.textPrimary,
-  );
+  static TextStyle get onGlass => TextStyle(
+        fontSize: 14,
+        height: 1.4,
+        fontWeight: FontWeight.w600,
+        color: GlassColors.textPrimary,
+      );
 }
 
 /// 圆角规范（Radius Tokens）。
@@ -349,50 +384,72 @@ class ClampedBouncingScrollPhysics extends BouncingScrollPhysics {
 
 /// 全局 Material 主题装配：让原生控件（Switch / Snackbar 等）跟随玻璃体系。
 abstract final class AppGlassTheme {
-  static ThemeData themeData() {
+  static ThemeData themeData({Brightness brightness = Brightness.light}) {
+    final dark = brightness == Brightness.dark;
     final base = ThemeData(
       useMaterial3: true,
-      brightness: Brightness.light,
-      colorScheme: const ColorScheme.light(
-        primary: GlassColors.mint,
-        onPrimary: GlassColors.textOnAccent,
-        secondary: GlassColors.iceBlue,
-        onSecondary: GlassColors.textOnAccent,
-        tertiary: GlassColors.lavender,
-        surface: GlassColors.canvas,
-        onSurface: GlassColors.textPrimary,
-        error: GlassColors.danger,
-        onError: GlassColors.textOnAccent,
-      ),
+      brightness: brightness,
+      colorScheme: dark
+          ? const ColorScheme.dark(
+              primary: Color(0xFF64D2B7),
+              onPrimary: Colors.white,
+              secondary: Color(0xFF70B6FF),
+              onSecondary: Colors.white,
+              tertiary: Color(0xFFA58BFF),
+              surface: Color(0xFF10161D),
+              onSurface: Color(0xFFE9EFF5),
+              error: Color(0xFFFF8FA3),
+              onError: Colors.white,
+            )
+          : const ColorScheme.light(
+              primary: Color(0xFF64D2B7),
+              onPrimary: Colors.white,
+              secondary: Color(0xFF70B6FF),
+              onSecondary: Colors.white,
+              tertiary: Color(0xFFA58BFF),
+              surface: Color(0xFFF8FAFC),
+              onSurface: Color(0xFF1B2A33),
+              error: Color(0xFFFF8FA3),
+              onError: Colors.white,
+            ),
     );
     return base.copyWith(
       // Scaffold 透明：背景色由 AmbientGlassBackground 环境底图提供
       scaffoldBackgroundColor: Colors.transparent,
       textTheme: base.textTheme.apply(
-        bodyColor: GlassColors.textPrimary,
-        displayColor: GlassColors.textPrimary,
+        bodyColor: dark ? GlassPalette.dark.textPrimary : GlassPalette.light.textPrimary,
+        displayColor:
+            dark ? GlassPalette.dark.textPrimary : GlassPalette.light.textPrimary,
       ),
       // 自研组件自带按压反馈，关闭 Material 水波纹避免玻璃面上的灰闪
       splashFactory: NoSplash.splashFactory,
       splashColor: Colors.transparent,
       highlightColor: Colors.transparent,
-      dividerTheme: const DividerThemeData(
-        color: Color(0x14243947),
+      dividerTheme: DividerThemeData(
+        // 暗色下分隔线用低透明白（浅色为低透明冷墨）
+        color: dark
+            ? const Color(0x24FFFFFF)
+            : const Color(0x14243947),
         thickness: 1,
         space: 1,
       ),
-      snackBarTheme: snackBarTheme(base),
+      snackBarTheme: _snackBarTheme(dark),
     );
   }
 
-  static SnackBarThemeData snackBarTheme(ThemeData base) => SnackBarThemeData(
+  static SnackBarThemeData _snackBarTheme(bool dark) => SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: const Color(0xF2FFFFFF),
+        backgroundColor: dark
+            ? const Color(0xE6223041) // 暗色玻璃实体
+            : const Color(0xF2FFFFFF),
         contentTextStyle: GlassTypography.onGlass,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(GlassRadius.md),
-          side: const BorderSide(color: Color(0x66FFFFFF), width: 1),
+          side: BorderSide(
+            color: dark ? GlassColors.rim(0.4) : const Color(0x66FFFFFF),
+            width: 1,
+          ),
         ),
       );
 }

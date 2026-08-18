@@ -4,6 +4,7 @@ library;
 
 export 'ambient_glass_background.dart';
 export 'app_glass_theme.dart';
+export 'glass_palette.dart';
 export 'widgets/glass_bottom_bar.dart';
 export 'widgets/glass_card.dart';
 export 'widgets/glass_input_field.dart';

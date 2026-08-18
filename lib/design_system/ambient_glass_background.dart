@@ -101,7 +101,7 @@ class _Blob {
 ///   + 樱花粉(右中) / 柔黄(左中) / 湖青(下中) / 白高光(顶中)
 /// driftFactor 0.08~0.16 + 各自独立的呼吸频率 —— 位置与浓淡双重流动，
 /// 1~2 秒即可感知色彩变化。
-const List<_Blob> _kBlobs = [
+final List<_Blob> _kBlobs = [
   _Blob(
     alignment: Alignment(-0.85, -0.7),
     radiusFactor: 0.58,
@@ -189,22 +189,23 @@ class _AmbientPainter extends CustomPainter {
 
   final Animation<double> animation;
 
+  /// 上次绘制时的明暗态：主题切换后与之不同则强制重绘。
+  bool? _paintedDark;
+
   @override
   void paint(Canvas canvas, Size size) {
+    _paintedDark = GlassColors.isDark;
     final rect = Offset.zero & size;
+    final palette = GlassColors.current;
 
-    // 基底：冷灰白对角渐变（左上最亮 → 右下微沉，符合光源方向）
+    // 基底：对角渐变（左上最亮 → 右下微沉，符合光源方向；暗色为深板岩系）
     canvas.drawRect(
       rect,
       Paint()
         ..shader = ui.Gradient.linear(
           rect.topLeft,
           rect.bottomRight,
-          const [
-            Color(0xFFFDFFFF), // 左上受光：近白
-            Color(0xFFEFF4FA), // 中段：冷灰白
-            Color(0xFFE7EEF7), // 右下背光：微沉的雾蓝
-          ],
+          palette.ambientBase,
           const [0.0, 0.55, 1.0],
         ),
     );
@@ -224,7 +225,7 @@ class _AmbientPainter extends CustomPainter {
       final center = base + drift;
       final radius = b.radiusFactor * size.longestSide;
       // 浓度呼吸：与漂移不同频不同相，光斑颜色忽浓忽淡 —— 位置与
-      // 色彩双重流动，整体色彩变换更丰富
+      // 色彩双重流动，整体色彩变换更丰富；暗色下整体浓度收敛
       final breathe = 0.78 + 0.22 * math.sin(t * b.pulseSpeed + b.phaseX * 1.7);
       canvas.drawCircle(
         center,
@@ -235,7 +236,7 @@ class _AmbientPainter extends CustomPainter {
             center,
             radius,
             [
-              b.color.withValues(alpha: b.alpha * breathe), // 中心峰值（呼吸）
+              b.color.withValues(alpha: b.alpha * breathe * palette.blobAlphaScale), // 中心峰值（呼吸）
               b.color.withValues(alpha: 0), // 边缘完全消散（无硬边）
             ],
           ),
@@ -245,5 +246,6 @@ class _AmbientPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_AmbientPainter oldDelegate) =>
-      !identical(oldDelegate.animation, animation);
+      !identical(oldDelegate.animation, animation) ||
+      oldDelegate._paintedDark != GlassColors.isDark;
 }

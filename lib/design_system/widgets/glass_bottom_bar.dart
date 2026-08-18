@@ -61,8 +61,7 @@ class GlassBottomBar extends StatelessWidget {
 
   Color _accentOf(int i) =>
       items[i].activeColor ??
-      const [GlassColors.mint, GlassColors.iceBlue, GlassColors.lavender][i %
-          3];
+      [GlassColors.mint, GlassColors.iceBlue, GlassColors.lavender][i % 3];
 
   @override
   Widget build(BuildContext context) {
@@ -89,19 +88,20 @@ class GlassBottomBar extends StatelessWidget {
                       foregroundPainter: _BarGlassPainter(
                         radius: GlassRadius.xl,
                       ),
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
                             begin: GlassLight.begin,
                             end: GlassLight.end,
-                            // α0.14→0.05：极淡染色提供体量感，通透靠模糊本身
+                            // 浅色 α0.14→0.05 极淡染色，通透靠模糊本身；
+                            // 暗色为深板岩半透，船体在暗底上保有体量
                             colors: [
-                              Colors.white.withValues(alpha: 0.14),
-                              Colors.white.withValues(alpha: 0.05),
+                              GlassColors.current.hullHi,
+                              GlassColors.current.hullLo,
                             ],
                           ),
-                        ),
                       ),
+                    ),
                     ),
                   ),
                 ),
@@ -194,7 +194,12 @@ class GlassBottomBar extends StatelessWidget {
       shaderCallback: (bounds) => LinearGradient(
         begin: GlassLight.begin,
         end: GlassLight.end,
-        colors: [accent.lighten(0.18), accent.darken(0.06)],
+        // 暗色换提亮 Deep 变体：基础品牌色（尤其 lavender/iceBlue）
+        // 在暗玻璃船体上亮度不足，浅色光斑穿透后更糊
+        colors: [
+          GlassColors.accentOnGlass(accent).lighten(0.18),
+          GlassColors.accentOnGlass(accent).darken(0.06),
+        ],
       ).createShader(bounds),
       blendMode: BlendMode.srcIn,
       child: content,
@@ -223,7 +228,7 @@ class _LiquidGlassPill extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: radius,
           border: Border.all(
-            color: Colors.white.withValues(alpha: 0.8),
+            color: GlassColors.rim(0.8),
             width: borderWidth,
           ),
           boxShadow: GlassShadow.chip(GlassColors.shadowInk),
@@ -240,10 +245,10 @@ class _LiquidGlassPill extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: GlassLight.begin,
                     end: GlassLight.end,
-                    // α0.52→0.26：比船体明显更实的白玻璃
+                    // 比船体明显更实的白玻璃（暗色收敛为低透明白）
                     colors: [
-                      Colors.white.withValues(alpha: 0.52),
-                      Colors.white.withValues(alpha: 0.26),
+                      GlassColors.surface(0.52),
+                      GlassColors.surface(0.26),
                     ],
                   ),
                 ),

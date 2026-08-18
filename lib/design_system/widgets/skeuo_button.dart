@@ -179,7 +179,8 @@ class _SkeuoButtonState extends State<SkeuoButton> {
     final accent = _accent;
     final ink = widget.accent == null
         ? GlassColors.textPrimary
-        : _accent.darken(0.28); // 玻璃底上文字需加深，保证对比
+        // 玻璃底上文字需保证对比：浅色加深、暗色提亮
+        : (GlassColors.isDark ? _accent.lighten(0.22) : _accent.darken(0.28));
     final borderWidth = 1.1;
 
     // 层级（外→内）：描边壳 → ClipRRect(描边内缘) → BackdropFilter → 渐变体。
@@ -189,7 +190,7 @@ class _SkeuoButtonState extends State<SkeuoButton> {
       decoration: BoxDecoration(
         borderRadius: radius,
         border: Border.all(
-          color: Colors.white.withValues(alpha: _pressed ? 0.5 : 0.75),
+          color: GlassColors.rim(_pressed ? 0.5 : 0.75),
           width: borderWidth,
         ),
         boxShadow: _pressed
@@ -230,15 +231,15 @@ class _SkeuoButtonState extends State<SkeuoButton> {
               gradient: LinearGradient(
                 begin: GlassLight.begin,
                 end: GlassLight.end,
-                // 按压时整体压暗一档，模拟玻璃被手指遮光
+                // 按压时整体压暗一档，模拟玻璃被手指遮光（暗色收敛为低透明白）
                 colors: _pressed
                     ? [
-                        Colors.white.withValues(alpha: 0.32),
-                        Colors.white.withValues(alpha: 0.14),
+                        GlassColors.surface(0.32),
+                        GlassColors.surface(0.14),
                       ]
                     : [
-                        Colors.white.withValues(alpha: 0.55),
-                        Colors.white.withValues(alpha: 0.26),
+                        GlassColors.surface(0.55),
+                        GlassColors.surface(0.26),
                       ],
               ),
             ),

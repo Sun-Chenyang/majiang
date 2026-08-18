@@ -24,7 +24,7 @@ class GlassInputField extends StatefulWidget {
     this.onChanged,
     this.onSubmitted,
     this.keyboardType,
-    this.accent = GlassColors.mint,
+    this.accent,
     this.clearable = true,
     this.enabled = true,
   });
@@ -42,8 +42,8 @@ class GlassInputField extends StatefulWidget {
   final ValueChanged<String>? onSubmitted;
   final TextInputType? keyboardType;
 
-  /// 聚焦主题色（光晕、描边与光标）。
-  final Color accent;
+  /// 聚焦主题色（光晕、描边与光标）；缺省薄荷。
+  final Color? accent;
 
   /// 文字非空时显示一键清除按钮。
   final bool clearable;
@@ -91,7 +91,7 @@ class _GlassInputFieldState extends State<GlassInputField> {
 
   @override
   Widget build(BuildContext context) {
-    final accent = widget.accent;
+    final accent = widget.accent ?? GlassColors.mint;
     final borderWidth = 1.3;
     final outer = Radius.circular(GlassRadius.sm);
     final inner = Radius.circular(GlassRadius.sm - borderWidth / 2);
@@ -120,7 +120,7 @@ class _GlassInputFieldState extends State<GlassInputField> {
           border: Border.all(
             color: _focused
                 ? accent.withValues(alpha: 0.55)
-                : Colors.white.withValues(alpha: 0.65),
+                : GlassColors.rim(0.65),
             width: borderWidth,
           ),
         ),
@@ -129,17 +129,17 @@ class _GlassInputFieldState extends State<GlassInputField> {
           borderRadius: BorderRadius.all(inner),
           child: BackdropFilter(
             filter: ui.ImageFilter.blur(sigmaX: 9, sigmaY: 9),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: GlassLight.begin,
-                  end: GlassLight.end,
-                  colors: [
-                    Colors.white.withValues(alpha: 0.45),
-                    Colors.white.withValues(alpha: 0.20),
-                  ],
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: GlassLight.begin,
+                    end: GlassLight.end,
+                    colors: [
+                      GlassColors.surface(0.45),
+                      GlassColors.surface(0.20),
+                    ],
+                  ),
                 ),
-              ),
               // ④ 沿边内阴影
               child: CustomPaint(
                 foregroundPainter: _EdgeInnerShadowPainter(
@@ -157,9 +157,11 @@ class _GlassInputFieldState extends State<GlassInputField> {
                         Icon(
                           widget.prefixIcon,
                           size: 20,
+                          // 未聚焦态与提示文字同级：玻璃面在浅色光斑上
+                          // 会被穿透提亮，tertiary 看不清，用 secondary
                           color: _focused
-                              ? accent.darken(0.2)
-                              : GlassColors.textTertiary,
+                              ? GlassColors.accentOnGlass(accent).darken(0.2)
+                              : GlassColors.textSecondary,
                         ),
                         const SizedBox(width: 10),
                       ],
@@ -174,7 +176,7 @@ class _GlassInputFieldState extends State<GlassInputField> {
                           onSubmitted: widget.onSubmitted,
                           cursorColor: accent,
                           cursorWidth: 1.8,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 15,
                             height: 1.4,
                             fontWeight: FontWeight.w500,
@@ -186,9 +188,11 @@ class _GlassInputFieldState extends State<GlassInputField> {
                             contentPadding:
                                 const EdgeInsets.symmetric(vertical: 15),
                             hintText: widget.hint,
-                            hintStyle: const TextStyle(
+                            hintStyle: TextStyle(
                               fontSize: 14.5,
-                              color: GlassColors.textTertiary,
+                              // 提示文字在磨砂玻璃上仍会被浅色光斑穿透，
+                              // tertiary 对比不足，用 secondary
+                              color: GlassColors.textSecondary,
                               fontWeight: FontWeight.w500,
                             ),
                           ),

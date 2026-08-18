@@ -17,11 +17,17 @@ class HandState {
   /// 用于三元番型补全（小三元/大三元含副露刻）与剩余张数扣减。
   final Set<int> honorMelds;
 
-  const HandState(this.concealed, this.honorMelds);
+  /// 他家已见张数（长 21）：他家弃牌 +1 / 他家碰 +3 / 他家杠 +4 的
+  /// 累计标记（M8.4）。缺省 null = 无标记。与撤销栈无关（标记独立于
+  /// 手牌编辑）；调用方负责保证单种累计 ≤ 4 − 自家已见。
+  final Uint8List? externalSeen;
+
+  const HandState(this.concealed, this.honorMelds, {this.externalSeen});
 
   HandState.empty()
       : concealed = Uint8List(kTileKindCount),
-        honorMelds = const {};
+        honorMelds = const {},
+        externalSeen = null;
 
   /// 暗牌总数。
   int get count {
@@ -44,10 +50,14 @@ class HandState {
   int get meldCount =>
       validPhase ? (((isDrawPhase ? 14 : 13) - count) ~/ 3) : 0;
 
-  /// 已见张数（自家视角）：暗牌 + 字牌副露（碰/杠一次性露出 3 张）。
-  /// P1 已见牌标记（他家弃牌/碰/杠）接入后在此扩展。
-  int seenCount(int t) => concealed[t] + (honorMelds.contains(t) ? 3 : 0);
+  /// 他家已见张数（0~4）。
+  int seenExternal(int t) => externalSeen?[t] ?? 0;
 
-  /// 剩余可摸张数。
-  int remainCount(int t) => 4 - seenCount(t);
+  /// 已见张数（自家视角）：暗牌 + 字牌副露（碰/杠一次性露出 3 张）
+  /// + 他家已见标记。
+  int seenCount(int t) =>
+      concealed[t] + (honorMelds.contains(t) ? 3 : 0) + seenExternal(t);
+
+  /// 剩余可摸张数（下限 0：标记超界的病态输入按 0 展示）。
+  int remainCount(int t) => 4 - seenCount(t) < 0 ? 0 : 4 - seenCount(t);
 }

@@ -25,10 +25,11 @@ Future<T?> showGlassModalBottomSheet<T>(
   BuildContext context, {
   required WidgetBuilder builder,
   String? title,
-  Color accent = GlassColors.mint,
+  Color? accent,
   Color? barrierColor,
   bool showDragHandle = true,
 }) {
+  final effectiveAccent = accent ?? GlassColors.mint;
   return showModalBottomSheet<T>(
     context: context,
     isScrollControlled: true,
@@ -40,7 +41,7 @@ Future<T?> showGlassModalBottomSheet<T>(
     barrierColor: barrierColor ?? GlassColors.scrim.withValues(alpha: 0.18),
     builder: (sheetContext) => _GlassSheet(
       title: title,
-      accent: accent,
+      accent: effectiveAccent,
       showDragHandle: showDragHandle,
       child: Builder(builder: builder),
     ),
@@ -87,10 +88,11 @@ class _GlassSheet extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: GlassLight.begin,
                     end: GlassLight.end,
+                    // 玻璃 α0.66 → α0.38（暗色为近实体深板岩）：
+                    // 内容可读性与通透度的平衡点
                     colors: [
-                      // 白玻璃 α0.66 → α0.38：内容可读性与通透度的平衡点
-                      Colors.white.withValues(alpha: 0.66),
-                      Colors.white.withValues(alpha: 0.38),
+                      GlassColors.current.sheetHi,
+                      GlassColors.current.sheetLo,
                     ],
                   ),
                 ),
@@ -123,9 +125,9 @@ class _GlassSheet extends StatelessWidget {
         width: 38,
         height: 4.5,
         decoration: BoxDecoration(
-          // 把手：白色半透明胶囊，暗示"可拖拽"
+          // 把手：白色半透明胶囊，暗示"可拖拽"（暗色自动收敛）
           borderRadius: BorderRadius.circular(GlassRadius.pill),
-          color: Colors.white.withValues(alpha: 0.55),
+          color: GlassColors.rim(0.55),
         ),
       ),
     );
