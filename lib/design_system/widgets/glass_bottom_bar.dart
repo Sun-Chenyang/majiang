@@ -231,7 +231,11 @@ class _LiquidGlassPill extends StatelessWidget {
             color: GlassColors.rim(0.8),
             width: borderWidth,
           ),
-          boxShadow: GlassShadow.chip(GlassColors.shadowInk),
+          // 灰墨投影在浅色底图上显脏：液态玻璃的立体层次靠双层磨砂
+          // + RimLight 描边表达，浅色不用影；暗色保留淡黑影维持悬浮深度
+          boxShadow: GlassColors.isDark
+              ? GlassShadow.chip(GlassColors.shadowInk)
+              : null,
         ),
         child: ClipRRect(
           borderRadius: innerRadius,

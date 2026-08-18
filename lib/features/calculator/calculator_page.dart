@@ -564,12 +564,12 @@ class _CalculatorPageState extends State<CalculatorPage> {
 
   Widget _buildResult(HandAnalysis result) {
     if (!result.validPhase) {
-      final total = _total;
+      if (_total == 0) return _buildOnboarding();
       return _resultCard(
         icon: Icons.info_outline_rounded,
         color: GlassColors.danger,
         deepColor: GlassColors.dangerDeep,
-        title: total == 0 ? '开始录入' : '手牌张数不对（当前 $total 张）',
+        title: '手牌张数不对（当前 $_total 张）',
         child: Text(
           '手牌应为 待摸 3n+1 张（13/10/7/4/1）或 待打 3n+2 张（14/11/8/5/2）。\n'
           '已碰/杠出的牌不用录入：碰一组后待摸剩 10 张、待打剩 11 张。',
@@ -580,6 +580,83 @@ class _CalculatorPageState extends State<CalculatorPage> {
 
     if (result.drawPhase) return _buildDrawResult(result);
     return _buildWaitResult(result);
+  }
+
+  /// 空手牌教程卡（total == 0）：柔和中性色（与状态胶囊「待录入」同语言），
+  /// 教用户基本操作；红色只留给张数不对的错误态。
+  Widget _buildOnboarding() {
+    return _resultCard(
+      icon: Icons.touch_app_outlined,
+      color: GlassColors.neutral,
+      deepColor: GlassColors.neutralDeep,
+      title: '开始录入 · 使用指引',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _tipRow(
+            Icons.add_circle_outline_rounded,
+            '加手牌',
+            '点上方牌池的牌面，每点一次加一张',
+          ),
+          _tipRow(
+            Icons.remove_circle_outline_rounded,
+            '减手牌',
+            '点手牌区里的牌，每点一次减一张',
+          ),
+          _tipRow(
+            Icons.outbound_rounded,
+            '同步牌池',
+            '长按牌池牌面，标记他家弃牌 / 碰 / 杠的已见张',
+          ),
+          _tipRow(
+            Icons.info_outline_rounded,
+            '碰 / 杠的牌不用录入',
+            '程序自动推断：碰一组后待摸 10 张、待打 11 张',
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 教程行：白玻璃行 + 中性色图标（与已见牌弹层 actionRow 同结构）。
+  Widget _tipRow(IconData icon, String title, String subtitle) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: GlassLight.begin,
+            end: GlassLight.end,
+            colors: [
+              GlassColors.surface(0.55),
+              GlassColors.surface(0.26),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(GlassRadius.sm),
+          border: Border.all(color: GlassColors.rim(0.55)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: GlassColors.neutralDeep),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: TextStyle(
+                          color: GlassColors.textPrimary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700)),
+                  Text(subtitle, style: GlassTypography.caption),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   /// 待摸（3n+1）：听牌判断 / n 向听进张 + 碰/杠时机。
