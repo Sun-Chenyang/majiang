@@ -28,8 +28,9 @@ class GlassBottomBarItem {
 /// 悬浮液态玻璃底部导航栏（iOS Liquid-Glass 风 Tab）。
 ///
 /// 分层结构（自下而上）：
-///   ① 船体：近乎无色的透明模糊 —— 只有 BackdropFilter σ=24 与
-///      α≈0.10 的极淡白染色 + RimLight 描边，通透感来自模糊本身；
+///   ① 船体：近乎无色的透明模糊 —— 只有 BackdropFilter σ=10（轻磨砂，
+///      背景轮廓保持可辨）与 α≈0.14 的极淡白染色 + RimLight 描边，
+///      通透感来自模糊本身；
 ///   ② 选中玻璃卡片：一块包裹「图标 + 标题」的小磨砂卡片，从上一
 ///      选中槽位平移滑入，easeOutBack 非线性曲线带轻微回弹；
 ///   ③ 槽位内容：选中 = 图标+文字（居中，与卡片严格对齐），
@@ -88,9 +89,9 @@ class GlassBottomBar extends StatelessWidget {
                       foregroundPainter: _BarGlassPainter(
                         radius: GlassRadius.xl,
                       ),
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
                             begin: GlassLight.begin,
                             end: GlassLight.end,
                             // 浅色 α0.14→0.05 极淡染色，通透靠模糊本身；
@@ -100,8 +101,8 @@ class GlassBottomBar extends StatelessWidget {
                               GlassColors.current.hullLo,
                             ],
                           ),
+                        ),
                       ),
-                    ),
                     ),
                   ),
                 ),
@@ -194,11 +195,11 @@ class GlassBottomBar extends StatelessWidget {
       shaderCallback: (bounds) => LinearGradient(
         begin: GlassLight.begin,
         end: GlassLight.end,
-        // 暗色换提亮 Deep 变体：基础品牌色（尤其 lavender/iceBlue）
-        // 在暗玻璃船体上亮度不足，浅色光斑穿透后更糊
+        // 以"玻璃上可读变体"（accentOnGlass：浅色=加深 Deep，暗色=提亮
+        // Deep）为基，向暗端渐变 0.18 —— 品牌色本身在白玻璃上仅 ~1.5:1
         colors: [
-          GlassColors.accentOnGlass(accent).lighten(0.18),
-          GlassColors.accentOnGlass(accent).darken(0.06),
+          GlassColors.accentOnGlass(accent),
+          GlassColors.accentOnGlass(accent).darken(0.18),
         ],
       ).createShader(bounds),
       blendMode: BlendMode.srcIn,
@@ -227,10 +228,7 @@ class _LiquidGlassPill extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: radius,
-          border: Border.all(
-            color: GlassColors.rim(0.8),
-            width: borderWidth,
-          ),
+          border: Border.all(color: GlassColors.rim(0.8), width: borderWidth),
           // 灰墨投影在浅色底图上显脏：液态玻璃的立体层次靠双层磨砂
           // + RimLight 描边表达，浅色不用影；暗色保留淡黑影维持悬浮深度
           boxShadow: GlassColors.isDark
@@ -274,11 +272,15 @@ class _BarGlassPainter extends CustomPainter {
 
   final double radius;
 
+  /// 上次绘制时的明暗态：主题切换后与之不同则强制重绘。
+  bool? _paintedDark;
+
   @override
   void paint(Canvas canvas, Size size) {
+    _paintedDark = GlassColors.isDark;
     final rect = Offset.zero & size;
 
-    // ① 上表面反光带（sheen）
+    // ① 上表面反光带（sheen）：走 rim() 门面，暗色自动收敛
     canvas.save();
     canvas.clipRRect(RRect.fromRectAndRadius(rect, Radius.circular(radius)));
     canvas.drawRect(
@@ -289,14 +291,14 @@ class _BarGlassPainter extends CustomPainter {
           Offset(0, 0),
           Offset(0, size.height * 0.4),
           [
-            Colors.white.withValues(alpha: 0.20), // 顶部反光较强
-            Colors.white.withValues(alpha: 0), // 40% 高度处完全消散
+            GlassColors.rim(0.20), // 顶部反光较强
+            GlassColors.rim(0), // 40% 高度处完全消散
           ],
         ),
     );
     canvas.restore();
 
-    // ② RimLight 棱线
+    // ② RimLight 棱线（玻璃棱线反光，暗色按 rimAlphaScale 收敛）
     final stroke = 1.2;
     canvas.drawRRect(
       RRect.fromRectAndRadius(
@@ -308,25 +310,30 @@ class _BarGlassPainter extends CustomPainter {
         ..strokeWidth = stroke
         ..isAntiAlias = true
         ..shader = ui.Gradient.linear(rect.topLeft, rect.bottomRight, [
-          Colors.white.withValues(alpha: 0.8), // 受光棱：亮（玻璃棱线反光）
-          Colors.white.withValues(alpha: 0.08),
+          GlassColors.rim(0.8), // 受光棱：亮（玻璃棱线反光）
+          GlassColors.rim(0.08),
         ]),
     );
   }
 
   @override
   bool shouldRepaint(_BarGlassPainter oldDelegate) =>
-      oldDelegate.radius != radius;
+      oldDelegate.radius != radius ||
+      oldDelegate._paintedDark != GlassColors.isDark;
 }
 
-/// 卡片 RimLight：左上亮棱，果冻高光感。
+/// 卡片 RimLight：左上亮棱，果冻高光感（暗色走 rim() 收敛）。
 class _PillRimPainter extends CustomPainter {
   _PillRimPainter({required this.radius});
 
   final double radius;
 
+  /// 上次绘制时的明暗态：主题切换后与之不同则强制重绘。
+  bool? _paintedDark;
+
   @override
   void paint(Canvas canvas, Size size) {
+    _paintedDark = GlassColors.isDark;
     final rect = Offset.zero & size;
     final stroke = 1.2;
     canvas.drawRRect(
@@ -339,13 +346,14 @@ class _PillRimPainter extends CustomPainter {
         ..strokeWidth = stroke
         ..isAntiAlias = true
         ..shader = ui.Gradient.linear(rect.topLeft, rect.bottomRight, [
-          Colors.white.withValues(alpha: 0.9),
-          Colors.white.withValues(alpha: 0.1),
+          GlassColors.rim(0.9),
+          GlassColors.rim(0.1),
         ]),
     );
   }
 
   @override
   bool shouldRepaint(_PillRimPainter oldDelegate) =>
-      oldDelegate.radius != radius;
+      oldDelegate.radius != radius ||
+      oldDelegate._paintedDark != GlassColors.isDark;
 }

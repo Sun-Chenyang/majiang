@@ -220,7 +220,7 @@ class SettingsPage extends StatelessWidget {
                     begin: GlassLight.begin,
                     end: GlassLight.end,
                     colors: [
-                      const Color(0xFFB7A3FF),
+                      GlassColors.lavender.lighten(0.2),
                       GlassColors.lavender,
                     ],
                   ),

@@ -484,9 +484,11 @@ class _CalculatorPageState extends State<CalculatorPage> {
   /// 情境开关 + 字牌碰/杠标记（PRD FR4.2 / FR1.5）。
   Widget _contextRow(HandAnalysis result) {
     if (_total == 0) return const SizedBox.shrink();
+    // 紧凑排布：spacing 5 + chip 水平 padding 8 让"自摸~碰白"
+    // 全部挤进一行；极端窄屏换行时 runSpacing 3 兜底
     return Wrap(
-      spacing: 6,
-      runSpacing: 6,
+      spacing: 5,
+      runSpacing: 3,
       children: [
         _ctxChip('自摸', _ctx.selfDraw, (v) {
           setState(() => _ctx = _ctx.copyWith(selfDraw: v));
@@ -505,11 +507,16 @@ class _CalculatorPageState extends State<CalculatorPage> {
           setState(() => _ctx = _ctx.copyWith(gangPao: v));
         }),
         if (result.meldCount > 0) ...[
-          const SizedBox(
-            width: 6, height: 30,
-            child: VerticalDivider(
-              width: 1,
-              color: Color(0x80FFFFFF),
+          // 竖分隔线：rim() 门面（暗色收敛），不能 const —— 门面随主题换值
+          SizedBox(
+            width: 6,
+            height: 30,
+            child: Center(
+              child: VerticalDivider(
+                width: 1,
+                thickness: 1,
+                color: GlassColors.rim(0.5),
+              ),
             ),
           ),
           for (final t in kHonorTiles)
@@ -524,38 +531,42 @@ class _CalculatorPageState extends State<CalculatorPage> {
   }
 
   /// 拟物小开关 chip：选中态薄荷染色玻璃（左上亮右下暗，遵循全局光照）。
+  /// InkWell 内垫垂直 padding 撑出 ~36px 触控热区（视觉不变、
+  /// 不占用水平空间，Wrap 保持横排；空间优先于 44 标准）。
   Widget _ctxChip(String label, bool value, ValueChanged<bool> onChanged) {
     final (base, border, fg) = value
         ? (GlassColors.mint, GlassColors.mint.withValues(alpha: 0.65),
             GlassColors.mintDeep)
-        : (Colors.white, GlassColors.rim(0.62), GlassColors.textTertiary);
+        : (Colors.white, GlassColors.rim(0.62), GlassColors.textSecondary);
     return InkWell(
       onTap: () {
         AppFeedback.tap();
         onChanged(!value);
       },
-      borderRadius: BorderRadius.circular(GlassRadius.pill),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: GlassLight.begin,
-            end: GlassLight.end,
-            colors: [
-              value
-                  ? base.withValues(alpha: 0.30)
-                  : GlassColors.surface(0.34),
-              value
-                  ? base.withValues(alpha: 0.16)
-                  : GlassColors.surface(0.20),
-            ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3.5),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4.5),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: GlassLight.begin,
+              end: GlassLight.end,
+              colors: [
+                value
+                    ? base.withValues(alpha: 0.30)
+                    : GlassColors.surface(0.34),
+                value
+                    ? base.withValues(alpha: 0.16)
+                    : GlassColors.surface(0.20),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(GlassRadius.pill),
+            border: Border.all(color: border),
           ),
-          borderRadius: BorderRadius.circular(GlassRadius.pill),
-          border: Border.all(color: border),
+          child: Text(label,
+              style: TextStyle(
+                  color: fg, fontSize: 11, fontWeight: FontWeight.w700)),
         ),
-        child: Text(label,
-            style: TextStyle(
-                color: fg, fontSize: 11, fontWeight: FontWeight.w700)),
       ),
     );
   }
@@ -941,10 +952,13 @@ class _CalculatorPageState extends State<CalculatorPage> {
           const SizedBox(width: 8),
           Expanded(
             flex: 4,
-            child: Text(subtitle,
-                maxLines: 2,
-                textAlign: TextAlign.right,
-                style: GlassTypography.caption),
+            child: Text(
+              subtitle,
+              maxLines: 2,
+              textAlign: TextAlign.right,
+              // tint 0.13 极薄玻璃会被光斑穿透，辅助字用高对比变体
+              style: GlassTypography.captionStrong,
+            ),
           ),
         ],
       ),

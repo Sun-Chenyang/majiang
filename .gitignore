@@ -38,7 +38,9 @@ android/local.properties
 
 # ---- 项目私有（不随仓库分发） ----
 /docs/
-/screenshots/
+# 截图：开发过程截图不入库，README 展示图除外
+/screenshots/*
+!/screenshots/readme/
 /.zcode/
 
 # 签名配置（密钥不入库）

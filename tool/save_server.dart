@@ -3,6 +3,7 @@
 library;
 
 import 'dart:io';
+import 'dart:typed_data';  // BytesBuilder（dart:io 的间接导出已弃用）
 
 Future<void> main() async {
   final dir = Directory('build/icon_preview');

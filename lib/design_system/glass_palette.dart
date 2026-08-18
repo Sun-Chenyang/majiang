@@ -120,12 +120,14 @@ class GlassPalette {
   Color tintForGlass(Color tint) =>
       isDark ? Color.lerp(tint, glass, 0.55)! : tint;
 
-  /// 品牌色做暗玻璃面上的文字/图标用色：浅色原样返回；暗色换用
-  /// 提亮 Deep 变体（基础品牌色亮度不足——lavender 仅 ~4.4:1，
-  /// 叠上浅色光斑穿透后更低；Deep 系列按 dark_palette_test ≥ 4.5:1）。
-  /// 底栏选中 tab 的渐变文字走这里；非品牌三色原样返回。
+  /// 品牌色做玻璃面上的文字/图标用色（"玻璃上可读变体"）：
+  ///  - 暗色：换提亮 Deep 变体（基础品牌色亮度不足——lavender 仅
+  ///    ~4.4:1，叠上浅色光斑穿透后更低；Deep 系列按 dark_palette_test
+  ///    ≥ 4.5:1）；
+  ///  - 浅色：换加深 Deep 变体（基础品牌色是"环境光色相"，亮度过高，
+  ///    在白玻璃上对比仅 ~1.5:1——底栏选中文字实测）。
+  /// 非品牌三色原样返回。底栏选中 tab 渐变文字走这里。
   Color accentOnGlass(Color brand) {
-    if (!isDark) return brand;
     if (brand == mint) return mintDeep;
     if (brand == iceBlue) return iceDeep;
     if (brand == lavender) return lavenderDeep;

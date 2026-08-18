@@ -129,25 +129,29 @@ class _GlassInputFieldState extends State<GlassInputField> {
           borderRadius: BorderRadius.all(inner),
           child: BackdropFilter(
             filter: ui.ImageFilter.blur(sigmaX: 9, sigmaY: 9),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: GlassLight.begin,
-                    end: GlassLight.end,
-                    colors: [
-                      GlassColors.surface(0.45),
-                      GlassColors.surface(0.20),
-                    ],
-                  ),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: GlassLight.begin,
+                  end: GlassLight.end,
+                  colors: [
+                    GlassColors.surface(0.45),
+                    GlassColors.surface(0.20),
+                  ],
                 ),
+              ),
               // ④ 沿边内阴影
               child: CustomPaint(
                 foregroundPainter: _EdgeInnerShadowPainter(
                   borderWidth: borderWidth,
                   radius: GlassRadius.sm,
+                  // 顶带背光色随主题：浅色冷墨；暗色用投影墨（纯黑）加深
+                  // 浓度——深板岩底上淡黑不可见，提到 0.5 才有凹槽感
                   shadowColor: _focused
                       ? accent.darken(0.15).withValues(alpha: 0.30)
-                      : const Color(0xFF2C4354).withValues(alpha: 0.15),
+                      : GlassColors.shadowInk.withValues(
+                          alpha: GlassColors.isDark ? 0.5 : 0.15,
+                        ),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -185,8 +189,9 @@ class _GlassInputFieldState extends State<GlassInputField> {
                           decoration: InputDecoration(
                             isCollapsed: true,
                             border: InputBorder.none,
-                            contentPadding:
-                                const EdgeInsets.symmetric(vertical: 15),
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 15,
+                            ),
                             hintText: widget.hint,
                             hintStyle: TextStyle(
                               fontSize: 14.5,
@@ -214,27 +219,34 @@ class _GlassInputFieldState extends State<GlassInputField> {
   }
 
   Widget _clearButton() {
+    // 视觉 22×22，外包 40×40 热区（移动端易点，视觉不变）
     return GestureDetector(
       onTap: () {
         HapticFeedback.selectionClick();
         _controller.clear();
         widget.onChanged?.call('');
       },
-      child: Container(
-        width: 22,
-        height: 22,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: LinearGradient(
-            begin: GlassLight.begin,
-            end: GlassLight.end,
-            colors: [
-              GlassColors.textTertiary.withValues(alpha: 0.35),
-              GlassColors.textTertiary.withValues(alpha: 0.18),
-            ],
+      child: SizedBox(
+        width: 40,
+        height: 40,
+        child: Center(
+          child: Container(
+            width: 22,
+            height: 22,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: GlassLight.begin,
+                end: GlassLight.end,
+                colors: [
+                  GlassColors.textTertiary.withValues(alpha: 0.35),
+                  GlassColors.textTertiary.withValues(alpha: 0.18),
+                ],
+              ),
+            ),
+            child: const Icon(Icons.close, size: 13, color: Colors.white),
           ),
         ),
-        child: const Icon(Icons.close, size: 13, color: Colors.white),
       ),
     );
   }
@@ -262,11 +274,16 @@ class _EdgeInnerShadowPainter extends CustomPainter {
 
   final Color shadowColor;
 
+  /// 上次绘制时的明暗态：主题切换后与之不同则强制重绘
+  /// （底部受光带走 rim() 门面，颜色不经过参数，需此兜底）。
+  bool? _paintedDark;
+
   static const double _topBand = 9; // 顶部背光带宽度
   static const double _bottomBand = 7; // 底部受光带宽度
 
   @override
   void paint(Canvas canvas, Size size) {
+    _paintedDark = GlassColors.isDark;
     final rect = Offset.zero & size;
 
     // 顶部背光描边：外沿贴外描边内缘，向内延伸 _topBand
@@ -291,7 +308,7 @@ class _EdgeInnerShadowPainter extends CustomPainter {
         ),
     );
 
-    // 底部受光描边
+    // 底部受光描边（白走 rim() 门面：暗色按 rimAlphaScale 收敛）
     final bottomCenter = borderWidth / 2 + _bottomBand / 2;
     final bottomRect = rect.deflate(bottomCenter);
     final bottomRRect = RRect.fromRectAndRadius(
@@ -308,10 +325,7 @@ class _EdgeInnerShadowPainter extends CustomPainter {
         ..shader = ui.Gradient.linear(
           Offset(0, bottomMid - _bottomBand / 2),
           Offset(0, bottomMid + _bottomBand / 2),
-          [
-            Colors.white.withValues(alpha: 0),
-            Colors.white.withValues(alpha: 0.5),
-          ],
+          [GlassColors.rim(0), GlassColors.rim(0.5)],
         ),
     );
   }
@@ -320,5 +334,6 @@ class _EdgeInnerShadowPainter extends CustomPainter {
   bool shouldRepaint(_EdgeInnerShadowPainter oldDelegate) =>
       oldDelegate.shadowColor != shadowColor ||
       oldDelegate.radius != radius ||
-      oldDelegate.borderWidth != borderWidth;
+      oldDelegate.borderWidth != borderWidth ||
+      oldDelegate._paintedDark != GlassColors.isDark;
 }

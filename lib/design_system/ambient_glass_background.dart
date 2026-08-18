@@ -9,7 +9,7 @@ import 'app_glass_theme.dart';
 ///
 /// 在 App 最底层铺一层「冷灰白基底 + 多枚柔和彩色光斑（Aura）」：
 ///  - 光斑用 [ui.Gradient.radial] 绘制，径向渐变天然弥散，
-///    不需要全屏 Blur filter，单帧仅 6 次 drawCircle，性能极佳；
+///    不需要全屏 Blur filter，单帧仅 8 次 drawCircle，性能极佳；
 ///  - 光斑随时间缓慢漂移（周期 [GlassDuration.ambient]），让上层
 ///    玻璃卡片的折射内容产生「色彩流动感」；
 ///  - 外层 [RepaintBoundary] 隔离重绘：光斑动画只重画自身图层，
@@ -101,6 +101,13 @@ class _Blob {
 ///   + 樱花粉(右中) / 柔黄(左中) / 湖青(下中) / 白高光(顶中)
 /// driftFactor 0.08~0.16 + 各自独立的呼吸频率 —— 位置与浓淡双重流动，
 /// 1~2 秒即可感知色彩变化。
+
+/// 装饰光斑专用色相（仅编队使用，不入 GlassPalette 语义令牌）。
+const Color _kSakura = Color(0xFFFFAEC9); // 樱花粉：清新暖调点缀
+const Color _kApricot = Color(0xFFFFD9A8); // 暖杏：平衡冷调、避免画面发闷
+const Color _kSoftYellow = Color(0xFFFFE486); // 柔黄：提升整体明度层次
+const Color _kAqua = Color(0xFF7DE3DC); // 湖青：薄荷与冰蓝之间的过渡色相
+
 final List<_Blob> _kBlobs = [
   _Blob(
     alignment: Alignment(-0.85, -0.7),
@@ -125,7 +132,7 @@ final List<_Blob> _kBlobs = [
   _Blob(
     alignment: Alignment(0.8, 0.45),
     radiusFactor: 0.42,
-    color: Color(0xFFFFAEC9), // 樱花粉：清新暖调点缀
+    color: _kSakura,
     alpha: 0.30,
     driftFactor: 0.13,
     phaseX: 3.7,
@@ -145,7 +152,7 @@ final List<_Blob> _kBlobs = [
   _Blob(
     alignment: Alignment(0.6, 1.0),
     radiusFactor: 0.36,
-    color: Color(0xFFFFD9A8), // 暖杏：平衡冷调、避免画面发闷
+    color: _kApricot,
     alpha: 0.24,
     driftFactor: 0.12,
     phaseX: 1.0,
@@ -155,7 +162,7 @@ final List<_Blob> _kBlobs = [
   _Blob(
     alignment: Alignment(-1.0, 0.15),
     radiusFactor: 0.40,
-    color: Color(0xFFFFE486), // 柔黄：提升整体明度层次
+    color: _kSoftYellow,
     alpha: 0.26,
     driftFactor: 0.13,
     phaseX: 5.3,
@@ -165,7 +172,7 @@ final List<_Blob> _kBlobs = [
   _Blob(
     alignment: Alignment(0.1, 1.0),
     radiusFactor: 0.46,
-    color: Color(0xFF7DE3DC), // 湖青：薄荷与冰蓝之间的过渡色相
+    color: _kAqua,
     alpha: 0.30,
     driftFactor: 0.13,
     phaseX: 2.8,
